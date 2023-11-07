@@ -16,4 +16,5 @@ require (
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 )

@@ -13,7 +13,6 @@ import (
 	"golang.org/x/image/font/basicfont"
 	"image/color"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -32,24 +31,24 @@ func (o *Rendable) Render(imd *imdraw.IMDraw) {
 
 func run() {
 	cfg := pixelgl.WindowConfig{
-		Title:  "Physics Simulation",
-		Bounds: pixel.R(0, 0, 1024, 768),
-		VSync:  true,
+		Title:     "Physics Simulation",
+		Bounds:    pixel.R(0, 0, 1024, 768),
+		Resizable: true,
+		VSync:     true,
 	}
 	win, err := pixelgl.NewWindow(cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	const simulationRate = 2
-	const targetFPS = 60
+	const simulationRate = 3
+	const targetFPS = 20
 	const timePrecision = simulationRate * targetFPS
 
 	var objects []*Rendable
 	var objects2 []physics.Object
-	var fields []physics.Field
 
-	objects, fields, computer := test(objects, timePrecision, fields)
+	objects, computer := test(objects, timePrecision)
 	for _, oo := range objects {
 		objects2 = append(objects2, oo.Obj)
 	}
@@ -76,19 +75,9 @@ func run() {
 		}
 
 		stimulateStart := time.Now()
-		wg := &sync.WaitGroup{}
-		for _, o := range objects {
-			o := o
-			wg.Add(1)
-			f := func() {
-				for i := simulationRate; i > 0; i-- {
-					computer.ComputeLocation(o.Obj, objects2, fields)
-				}
-				wg.Done()
-			}
-			go f()
+		for i := simulationRate; i > 0; i-- {
+			computer.Compute(objects2, nil)
 		}
-		wg.Wait()
 		stimulateDur := time.Now().Sub(stimulateStart)
 		basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 		basicTxt := text.New(pixel.V(40, 40), basicAtlas)
@@ -111,11 +100,11 @@ func run() {
 			c := color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 0}
 			for i := float64(0); i < 10; i++ {
 				position := mgl64.Vec3{20, 40 - i, 0}
-				velocity := mgl64.Vec3{2, 0, 0}
+				velocity := mgl64.Vec3{3, 0, 0}
 
 				object := realworld.NewMassPoint(
 					position, velocity,
-					10,
+					1,
 					&physics.CollisionBox{Radius: 0.3},
 					0,
 				)
@@ -136,7 +125,7 @@ func run() {
 	}
 }
 
-func test(objects []*Rendable, tickPerSecond uint64, fields []physics.Field) ([]*Rendable, []physics.Field, *physics.RealWorldComputer) {
+func test(objects []*Rendable, tickPerSecond uint64) ([]*Rendable, *physics.RealWorldComputer) {
 	baseObjectA := realworld.NewMassPoint(
 		mgl64.Vec3{20, 60, 0},
 		mgl64.Vec3{0, 0, 0},
@@ -212,7 +201,7 @@ func test(objects []*Rendable, tickPerSecond uint64, fields []physics.Field) ([]
 		},
 	}
 
-	return objects, fields, computer
+	return objects, computer
 }
 
 func main() {
