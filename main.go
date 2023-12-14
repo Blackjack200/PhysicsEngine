@@ -12,6 +12,7 @@ import (
 	"golang.org/x/image/colornames"
 	"golang.org/x/image/font/basicfont"
 	"image/color"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -27,20 +28,50 @@ func meterToPixel(meter physics.Meter) float64 {
 	return meter * PixelPerMeter
 }
 
-type Renderable struct {
+// 定义环境光强度
+const ambientIntensity = 0.2
+
+type Light struct {
+	Direction mgl64.Vec3
+	Color     color.RGBA
+	Intensity float64
+}
+
+var (
+	cameraPos = mgl64.Vec3{50, 33, 75}
+	fov       = 110.0
+)
+
+type Renderable3D struct {
 	Obj   physics.Object
 	Color color.RGBA
 }
 
-func (o *Renderable) Render(imd *imdraw.IMDraw) {
-	objV := mgl64.Vec2{o.Obj.Location().X(), o.Obj.Location().Y()}.Mul(PixelPerMeter)
+func (o *Renderable3D) Render(imd *imdraw.IMDraw, win *pixelgl.Window) {
+	objV := o.Obj.Location()
 	imd.Color = o.Color
-	imd.Push(pixel.V(objV.X(), objV.Y()))
-	radius := physics.Meter(1)
+
+	projected := perspectiveProjection(objV, win.Bounds().Center(), fov, win.Bounds().Size())
+	imd.Push(pixel.V(projected.X(), projected.Y()))
+
+	imd.Color = o.Color
+	distanceToCamera := objV.Sub(cameraPos).Len()
+
+	radius := physics.Meter(1) / distanceToCamera
 	if o, ok := o.Obj.(physics.Collided); ok {
-		radius = o.Box().Radius
+		radius = o.Box().Radius / distanceToCamera
 	}
 	imd.Circle(meterToPixel(radius), 0)
+}
+
+func perspectiveProjection(point mgl64.Vec3, screenCenter pixel.Vec, fov float64, screenSize pixel.Vec) mgl64.Vec2 {
+	relativePos := point.Sub(cameraPos)
+
+	scale := screenSize.X / (math.Tan(fov*math.Pi/360.0) * relativePos.Z())
+	projectedX := screenCenter.X + relativePos.X()*scale
+	projectedY := screenCenter.Y + relativePos.Y()*scale
+
+	return mgl64.Vec2{projectedX, projectedY}
 }
 
 func run() {
@@ -61,21 +92,41 @@ func run() {
 	const secondPerTick = 1.0 / tickPerSecond
 	const targetFPS = tickPerSecond
 
-	var objects []*Renderable
-	objects, computer := test(objects, tickPerSecond)
+	var objects []*Renderable3D
+	objects, computer := test3D(objects, tickPerSecond)
 
 	var objectList []physics.Object
 	for _, oo := range objects {
 		objectList = append(objectList, oo.Obj)
 	}
-
+	win.SetColorMask(color.White)
 	imd := imdraw.New(nil)
 	record := false
 	fps := targetFPS
 	fpsFrameCounter := 1
+	cameraSpeed := 5.0
+
 	fpsDur := time.Now()
 	for !win.Closed() {
 		imd.Clear()
+		if win.Pressed(pixelgl.KeyW) {
+			cameraPos = cameraPos.Add(mgl64.Vec3{0, 0, -cameraSpeed * secondPerTick})
+		}
+		if win.Pressed(pixelgl.KeyS) {
+			cameraPos = cameraPos.Add(mgl64.Vec3{0, 0, cameraSpeed * secondPerTick})
+		}
+		if win.Pressed(pixelgl.KeyA) {
+			cameraPos = cameraPos.Add(mgl64.Vec3{-cameraSpeed * secondPerTick, 0, 0})
+		}
+		if win.Pressed(pixelgl.KeyD) {
+			cameraPos = cameraPos.Add(mgl64.Vec3{cameraSpeed * secondPerTick, 0, 0})
+		}
+		if win.Pressed(pixelgl.KeyUp) {
+			cameraPos = cameraPos.Add(mgl64.Vec3{0, cameraSpeed * secondPerTick, 0})
+		}
+		if win.Pressed(pixelgl.KeyDown) {
+			cameraPos = cameraPos.Add(mgl64.Vec3{0, -cameraSpeed * secondPerTick, 0})
+		}
 		if win.Pressed(pixelgl.MouseButtonLeft) || win.Pressed(pixelgl.MouseButtonRight) {
 			record = !record
 		}
@@ -84,7 +135,7 @@ func run() {
 
 		drawStart := time.Now()
 		for _, o := range objects {
-			o.Render(imd)
+			o.Render(imd, win)
 		}
 		drawDur := time.Now().Sub(drawStart)
 
@@ -140,7 +191,8 @@ func run() {
 					&physics.CollisionBox{Radius: 5},
 					-1*0.0001,
 				)
-				objects = append(objects, &Renderable{
+				object.SetVelocity(mgl64.Vec3{0, 0, 20}, secondPerTick)
+				objects = append(objects, &Renderable3D{
 					Obj:   object,
 					Color: c,
 				})
@@ -156,7 +208,7 @@ func run() {
 	}
 }
 
-func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.Solver) {
+func test3D(objects []*Renderable3D, tickPerSecond uint64) ([]*Renderable3D, *physics.Solver) {
 	computer := &physics.Solver{
 		TickPerSecond:    tickPerSecond,
 		CollisionPerTick: 4,
@@ -164,9 +216,7 @@ func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.
 			physics.NewForce(mgl64.Vec3{0, -9.8, 0}),
 		},
 		Constraints: []physics.Constraint{
-			realworld.RoundGround(mgl64.Vec3{50, 50}, 50),
-			//realworld.GroundX(20, 80),
-			//realworld.GroundY(20, 80),
+			realworld.RoundGround(mgl64.Vec3{50, 50, 0}, 50),
 		},
 	}
 
