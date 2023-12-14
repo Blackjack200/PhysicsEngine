@@ -57,7 +57,7 @@ func run() {
 		panic(err)
 	}
 
-	const tickPerSecond = 60
+	const tickPerSecond = 20
 	const secondPerTick = 1.0 / tickPerSecond
 	const targetFPS = tickPerSecond
 
@@ -71,7 +71,6 @@ func run() {
 
 	imd := imdraw.New(nil)
 	record := false
-	generate := false
 	fps := targetFPS
 	fpsFrameCounter := 1
 	fpsDur := time.Now()
@@ -81,9 +80,7 @@ func run() {
 			record = !record
 		}
 
-		if win.Pressed(pixelgl.KeySpace) {
-			generate = !generate
-		}
+		generate := win.Pressed(pixelgl.KeySpace)
 
 		drawStart := time.Now()
 		for _, o := range objects {
@@ -132,23 +129,23 @@ func run() {
 		imd.Draw(win)
 		win.Update()
 		if generate && fpsFrameCounter%10 == 0 {
-			c := color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 0}
+			for i := 1.0; i < 2; i++ {
+				c := color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 0}
 
-			position := mgl64.Vec3{60, 40, 0}
+				position := mgl64.Vec3{60, 40 - i, 0}
 
-			object := realworld.NewMassPoint(
-				position,
-				1,
-				&physics.CollisionBox{Radius: 1},
-				-1*0.0001,
-			)
-			object.SetVelocity(mgl64.Vec3{3, 0, 0}, secondPerTick)
-			objects = append(objects, &Renderable{
-				Obj:   object,
-				Color: c,
-			})
-			objectList = append(objectList, object)
-
+				object := realworld.NewMassPoint(
+					position,
+					1,
+					&physics.CollisionBox{Radius: 5},
+					-1*0.0001,
+				)
+				objects = append(objects, &Renderable{
+					Obj:   object,
+					Color: c,
+				})
+				objectList = append(objectList, object)
+			}
 		}
 		fpsFrameCounter++
 		if time.Now().Sub(fpsDur) >= time.Second {
@@ -162,12 +159,12 @@ func run() {
 func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.Solver) {
 	computer := &physics.Solver{
 		TickPerSecond:    tickPerSecond,
-		CollisionPerTick: 6,
+		CollisionPerTick: 4,
 		GlobalFields: []physics.Field{
 			physics.NewForce(mgl64.Vec3{0, -9.8, 0}),
 		},
 		Constraints: []physics.Constraint{
-			realworld.RoundGround(mgl64.Vec3{50, 50}, 40),
+			realworld.RoundGround(mgl64.Vec3{50, 50}, 50),
 			//realworld.GroundX(20, 80),
 			//realworld.GroundY(20, 80),
 		},

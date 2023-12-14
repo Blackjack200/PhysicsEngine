@@ -1,27 +1,42 @@
 package physics
 
 import (
+	"PhysicsEngine/physics/grid"
 	"github.com/go-gl/mathgl/mgl64"
 )
 
 type Solver struct {
 	TickPerSecond    uint64
 	CollisionPerTick uint64
+	GridSize         uint64
 	GlobalFields     []Field
 	Constraints      []Constraint
+	Grid             *grid.Fixed[MoveCollided]
 }
 
 func (r *Solver) Compute(
 	objects []Object,
 	forces map[Object][]Field,
 ) {
-
-	for i := uint64(1); i < r.CollisionPerTick; i++ {
-		for _, o := range objects {
-			if o, ok := o.(MoveCollided); ok {
-				r.solveCollision(o, objects)
-			}
+	if r.Grid == nil {
+		r.Grid = grid.NewFixedGrid[MoveCollided](3)
+	}
+	sum, sam := 0.0, 0.0
+	for _, o := range objects {
+		if o, ok := o.(MoveCollided); ok {
+			sum += o.Box().Radius
+			sam += 1
 		}
+	}
+	av := sum / sam
+	r.Grid.Resize(av * 1.2)
+	for _, o := range objects {
+		if o, ok := o.(MoveCollided); ok {
+			r.Grid.Put(o.Location(), o.Box().Radius, o)
+		}
+	}
+	for i := uint64(1); i < r.CollisionPerTick; i++ {
+		r.solveCollision()
 	}
 
 	for _, o := range objects {
@@ -77,33 +92,9 @@ func (r *Solver) calcVerlet(self Movable, dt float64, accelerationPresent mgl64.
 	locationFuture := locationPresent.Mul(2).Sub(locationPast).
 		Add(accelerationPresent.Mul(dt * dt))
 
-	return locationFuture
-}
-
-func (r *Solver) solveCollision(self MoveCollided, objects []Object) {
-	sLoc := self.Location()
-	sB := self.Box().Translate(sLoc)
-
-	for _, o := range objects {
-		if o == self {
-			continue
-		}
-
-		if o, ok := o.(MoveCollided); ok {
-			oLoc := o.Location()
-			oB := o.Box().Translate(oLoc)
-			if oB.Collided(sB) {
-				collisionNormal := sLoc.Sub(oLoc).Normalize()
-
-				overlap := sB.Radius + oB.Radius - sLoc.Sub(oLoc).Len()
-				separation := collisionNormal.Mul(overlap * 0.5)
-
-				newLoc := sLoc.Add(separation)
-				oLoc = oLoc.Sub(separation)
-				self.SetLocation(newLoc)
-				o.SetLocation(oLoc)
-				sB = self.Box().Translate(newLoc)
-			}
-		}
+	if locationFuture.Sub(locationPresent).Len() < 0.01 {
+		locationFuture = locationPresent
 	}
+
+	return locationFuture
 }

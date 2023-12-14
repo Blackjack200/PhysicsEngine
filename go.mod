@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/faiface/pixel v0.10.0
 	github.com/go-gl/mathgl v1.1.0
+	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb
 	golang.org/x/image v0.14.0
 )
 
