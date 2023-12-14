@@ -11,13 +11,11 @@ type Object interface {
 
 type Movable interface {
 	Object
-
-	Velocity() mgl64.Vec3
-	SetVelocity(mgl64.Vec3)
-
 	LastPosition() mgl64.Vec3
-	FinalizeTick()
+	NextTick()
 	SetLocation(mgl64.Vec3)
+	Acceleration() mgl64.Vec3
+	Accelerate(mgl64.Vec3)
 }
 
 type Collided interface {

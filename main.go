@@ -57,7 +57,8 @@ func run() {
 		panic(err)
 	}
 
-	const tickPerSecond = 20
+	const tickPerSecond = 60
+	const secondPerTick = 1.0 / tickPerSecond
 	const targetFPS = tickPerSecond
 
 	var objects []*Renderable
@@ -130,21 +131,18 @@ func run() {
 
 		imd.Draw(win)
 		win.Update()
-		if generate && fpsFrameCounter%30 == 0 {
+		if generate && fpsFrameCounter%10 == 0 {
 			c := color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 0}
 
 			position := mgl64.Vec3{60, 40, 0}
-			mul := 1.0
-
-			velocity := mgl64.Vec3{5, 0, 0}.Mul(mul)
 
 			object := realworld.NewMassPoint(
-				position, velocity,
+				position,
 				1,
 				&physics.CollisionBox{Radius: 1},
 				-1*0.0001,
 			)
-
+			object.SetVelocity(mgl64.Vec3{3, 0, 0}, secondPerTick)
 			objects = append(objects, &Renderable{
 				Obj:   object,
 				Color: c,
@@ -161,16 +159,17 @@ func run() {
 	}
 }
 
-func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.Computer) {
-	computer := &physics.Computer{
-		TickPerSecond: tickPerSecond,
+func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.Solver) {
+	computer := &physics.Solver{
+		TickPerSecond:    tickPerSecond,
+		CollisionPerTick: 6,
 		GlobalFields: []physics.Field{
 			physics.NewForce(mgl64.Vec3{0, -9.8, 0}),
 		},
 		Constraints: []physics.Constraint{
 			realworld.RoundGround(mgl64.Vec3{50, 50}, 40),
-			//realworld.AbsorbGroundX(20, 80),
-			//realworld.AbsorbGroundY(20, 80),
+			//realworld.GroundX(20, 80),
+			//realworld.GroundY(20, 80),
 		},
 	}
 
