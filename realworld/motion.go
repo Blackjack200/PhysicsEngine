@@ -59,13 +59,6 @@ func NewCyclicMotion(point mgl64.Vec3, freq, radius physics.Meter, clockwise boo
 	return
 }
 
-func StartCyclicMotion(obj physics.Movable, point mgl64.Vec3, freq, radius physics.Meter, clockwise bool) physics.Field {
-	location, velocity, f := NewCyclicMotion(point, freq, radius, clockwise)
-	obj.SetLocation(location)
-	obj.SetVelocity(velocity)
-	return f
-}
-
 const (
 	GravitationalConstant = 6.67430e-11
 	CoulombConstant       = 8.99e9

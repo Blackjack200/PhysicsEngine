@@ -6,15 +6,31 @@ import (
 )
 
 type MassPoint struct {
-	location mgl64.Vec3
-	velocity mgl64.Vec3
-	mass     float64
-	box      *physics.CollisionBox
-	charge   float64
+	location     mgl64.Vec3
+	lastLocation mgl64.Vec3
+	velocity     mgl64.Vec3
+	mass         float64
+	box          *physics.CollisionBox
+	charge       float64
 }
 
 func NewMassPoint(location mgl64.Vec3, velocity mgl64.Vec3, mass float64, box *physics.CollisionBox, charge float64) *MassPoint {
-	return &MassPoint{location: location, velocity: velocity, mass: mass, box: box, charge: charge}
+	return &MassPoint{
+		location:     location,
+		lastLocation: location,
+		velocity:     velocity,
+		mass:         mass,
+		box:          box,
+		charge:       charge,
+	}
+}
+
+func (p *MassPoint) FinalizeTick() {
+	p.lastLocation = p.location
+}
+
+func (p *MassPoint) LastPosition() mgl64.Vec3 {
+	return p.lastLocation
 }
 
 func (p *MassPoint) Location() mgl64.Vec3 {

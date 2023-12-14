@@ -130,27 +130,27 @@ func run() {
 
 		imd.Draw(win)
 		win.Update()
-		if generate && fpsFrameCounter%20 == 0 {
+		if generate && fpsFrameCounter%30 == 0 {
 			c := color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 0}
-			for i := float64(0); i < 1; i++ {
-				position := mgl64.Vec3{60, 40 - i, 0}
-				mul := 1.0
 
-				velocity := mgl64.Vec3{0, 0, 0}.Mul(mul)
+			position := mgl64.Vec3{60, 40, 0}
+			mul := 1.0
 
-				object := realworld.NewMassPoint(
-					position, velocity,
-					1,
-					&physics.CollisionBox{Radius: 2},
-					-1*0.0001,
-				)
+			velocity := mgl64.Vec3{5, 0, 0}.Mul(mul)
 
-				objects = append(objects, &Renderable{
-					Obj:   object,
-					Color: c,
-				})
-				objectList = append(objectList, object)
-			}
+			object := realworld.NewMassPoint(
+				position, velocity,
+				1,
+				&physics.CollisionBox{Radius: 1},
+				-1*0.0001,
+			)
+
+			objects = append(objects, &Renderable{
+				Obj:   object,
+				Color: c,
+			})
+			objectList = append(objectList, object)
+
 		}
 		fpsFrameCounter++
 		if time.Now().Sub(fpsDur) >= time.Second {
@@ -161,13 +161,13 @@ func run() {
 	}
 }
 
-func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.NewtonComputer) {
-	computer := &physics.NewtonComputer{
+func test(objects []*Renderable, tickPerSecond uint64) ([]*Renderable, *physics.Computer) {
+	computer := &physics.Computer{
 		TickPerSecond: tickPerSecond,
 		GlobalFields: []physics.Field{
-			physics.NewForce(mgl64.Vec3{0, -0.98, 0}),
+			physics.NewForce(mgl64.Vec3{0, -9.8, 0}),
 		},
-		ConstraintFields: []physics.Field{
+		Constraints: []physics.Constraint{
 			realworld.RoundGround(mgl64.Vec3{50, 50}, 40),
 			//realworld.AbsorbGroundX(20, 80),
 			//realworld.AbsorbGroundY(20, 80),

@@ -6,15 +6,18 @@ import (
 
 type Object interface {
 	Location() mgl64.Vec3
-	SetLocation(mgl64.Vec3)
-
 	Mass() float64
 }
 
 type Movable interface {
 	Object
+
 	Velocity() mgl64.Vec3
 	SetVelocity(mgl64.Vec3)
+
+	LastPosition() mgl64.Vec3
+	FinalizeTick()
+	SetLocation(mgl64.Vec3)
 }
 
 type Collided interface {

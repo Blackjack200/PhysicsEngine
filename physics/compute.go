@@ -4,94 +4,119 @@ import (
 	"github.com/go-gl/mathgl/mgl64"
 )
 
-type Computer interface {
-	ComputeLocation(obj Object, fields []Field)
+type Computer struct {
+	TickPerSecond uint64
+	GlobalFields  []Field
+	Constraints   []Constraint
 }
 
-type NewtonComputer struct {
-	TickPerSecond    uint64
-	GlobalFields     []Field
-	ConstraintFields []Field
-}
-
-func (r *NewtonComputer) Compute(
+func (r *Computer) Compute(
 	objects []Object,
 	forces map[Object][]Field,
 ) {
-	secondPerTick := float64(1) / float64(r.TickPerSecond)
-	for _, o := range objects {
-		//collision
-		if o, ok := o.(MoveCollided); ok {
-			for i := 0; i < 100; i++ {
-				r.solveCollision(o, objects)
-			}
-		}
-		if o, ok := o.(Movable); ok {
-			r.constraintLocation(o, secondPerTick)
-		}
-	}
+
 	for _, o := range objects {
 		var f []Field
 		if forces != nil {
 			f, _ = forces[o]
 		}
-		r.compute(o, objects, f)
+		if o, ok := o.(MoveCollided); ok {
+			r.solveCollision(o, objects)
+		}
+		r.compute(o, f)
+	}
+	for _, c := range r.Constraints {
+		for _, o := range objects {
+			if o, ok := o.(Movable); ok {
+				c.Constraint(o)
+			}
+		}
 	}
 }
 
-func (r *NewtonComputer) compute(
+func (r *Computer) compute(
 	self Object,
-	objects []Object,
-	objectFields []Field,
+	forces []Field,
 ) {
 	//present
-	secondPerTick := float64(1) / float64(r.TickPerSecond)
+	dt := float64(1) / float64(r.TickPerSecond)
 
 	if self, ok := self.(Movable); ok {
-		acceleration := mgl64.Vec3{0, 0, 0}
+		accelerationPresent := mgl64.Vec3{0, 0, 0}
 
 		for _, f := range r.GlobalFields {
 			if f.Interact(self) {
-				acceleration = acceleration.Add(f.Accelerate(self, secondPerTick))
+				accelerationPresent = accelerationPresent.Add(f.Accelerate(self, dt))
 			}
 		}
 
-		for _, f := range objectFields {
+		for _, f := range forces {
 			if f.Interact(self) {
-				acceleration = acceleration.Add(f.Accelerate(self, secondPerTick))
+				accelerationPresent = accelerationPresent.Add(f.Accelerate(self, dt))
 			}
 		}
 
-		velocity := self.Velocity()
-		oldLoc := self.Location()
-		self.SetLocation(oldLoc.Add(velocity.Mul(secondPerTick)))
+		locationFuture := r.calcVerlet(self, dt, accelerationPresent)
 
-		deltaVelocity := acceleration.Mul(secondPerTick)
-
-		//chain constraints
-		if self, ok := self.(Chained); ok {
-			if next := self.Next(); self.HasNext() {
-				delta := self.Location().Sub(oldLoc)
-				next.SetLocation(next.Location().Add(delta))
-			}
-		}
+		self.FinalizeTick()
 		//future
-		self.SetVelocity(velocity.Add(deltaVelocity))
+		self.SetLocation(locationFuture)
 	}
 }
 
-func (r *NewtonComputer) constraintLocation(self Movable, secondPerTick float64) {
-	constraintAcc := mgl64.Vec3{0, 0, 0}
+func (r *Computer) calcVerlet(self Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
+	locationPast := self.LastPosition()
+	locationPresent := self.Location()
 
-	for _, f := range r.ConstraintFields {
-		if f.Interact(self) {
-			constraintAcc = constraintAcc.Add(f.Accelerate(self, secondPerTick))
-		}
-	}
-	self.SetLocation(self.Location().Add(constraintAcc.Mul(secondPerTick * secondPerTick)))
+	locationFuture := locationPresent.Mul(2).Sub(locationPast).
+		Add(accelerationPresent.Mul(dt * dt))
+
+	return locationFuture
 }
 
-func (r *NewtonComputer) solveCollision(self MoveCollided, objects []Object) {
+/*func (r *Computer) calcExplicitEuler(self Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
+	locationPresent := self.Location()
+	velocityPresent := self.Velocity()
+	locationFuture := locationPresent.Add(velocityPresent.Mul(dt))
+	velocityFuture := velocityPresent.Add(accelerationPresent.Mul(dt))
+	self.SetVelocity(velocityFuture)
+	return locationFuture
+}
+
+func (r *Computer) calcLeapfrog(self Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
+	locationPresent := self.Location()
+	velocityPresent := self.Velocity()
+
+	halfVelocity := velocityPresent.Add(accelerationPresent.Mul(0.5 * dt))
+
+	locationFuture := locationPresent.Add(halfVelocity.Mul(dt))
+
+	velocityFuture := halfVelocity.Add(accelerationPresent.Mul(0.5 * dt))
+	self.SetVelocity(velocityFuture)
+
+	return locationFuture
+}
+func (r *Computer) calcRungeKutta(self Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
+	locationPresent := self.Location()
+	velocityPresent := self.Velocity()
+
+	// RK4 calculations
+	k1 := velocityPresent.Mul(dt)
+	k2 := (velocityPresent.Add(accelerationPresent.Mul(0.5 * dt))).Mul(dt)
+	k3 := (velocityPresent.Add(accelerationPresent.Mul(0.5 * dt))).Mul(dt)
+	k4 := (velocityPresent.Add(accelerationPresent.Mul(dt))).Mul(dt)
+
+	// Calculate future position
+	locationFuture := locationPresent.Add((k1.Add(k2).Add(k3).Add(k4)).Mul(1.0 / 6.0))
+
+	// Update velocity using future acceleration
+	velocityFuture := velocityPresent.Add(accelerationPresent.Mul(dt))
+	self.SetVelocity(velocityFuture)
+
+	return locationFuture
+}*/
+
+func (r *Computer) solveCollision(self MoveCollided, objects []Object) {
 	sLoc := self.Location()
 	sB := self.Box().Translate(sLoc)
 
@@ -105,20 +130,6 @@ func (r *NewtonComputer) solveCollision(self MoveCollided, objects []Object) {
 			oB := o.Box().Translate(oLoc)
 			if oB.Collided(sB) {
 				collisionNormal := sLoc.Sub(oLoc).Normalize()
-
-				relativeVelocity := self.Velocity().Sub(o.Velocity())
-
-				mass1 := self.Mass()
-				mass2 := o.Mass()
-				impulseMolecule := 2 * relativeVelocity.Dot(collisionNormal)
-				impulseDenominator := (1/mass1 + 1/mass2) * collisionNormal.LenSqr()
-
-				impulse := impulseMolecule / impulseDenominator
-
-				selfVel := self.Velocity().Sub(collisionNormal.Mul(impulse / mass1))
-				oVel := o.Velocity().Add(collisionNormal.Mul(impulse / mass2))
-				self.SetVelocity(selfVel)
-				o.SetVelocity(oVel)
 
 				overlap := sB.Radius + oB.Radius - sLoc.Sub(oLoc).Len()
 				separation := collisionNormal.Mul(overlap * 0.5)
