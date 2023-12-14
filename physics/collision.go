@@ -3,11 +3,11 @@ package physics
 import "github.com/go-gl/mathgl/mgl64"
 
 type CollisionBox struct {
-	Radius float64
+	Radius Meter
 }
 
 type TranslatedBox struct {
-	Radius float64
+	Radius Meter
 	Center mgl64.Vec3
 }
 

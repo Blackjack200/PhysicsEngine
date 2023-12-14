@@ -7,8 +7,8 @@ import (
 	"math/rand"
 )
 
-func ElasticGround(height float64) physics.Field {
-	return &physics.Force{AccelerationFunc: func(obj physics.Object) mgl64.Vec3 {
+func ElasticGround(height physics.Meter) physics.Field {
+	return &physics.Force{AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
 		if obj, ok := obj.(physics.Movable); ok {
 			if obj.Location().Y()-height < mgl64.Epsilon*20 {
 				vel := obj.Velocity().Mul(-1)
@@ -22,8 +22,8 @@ func ElasticGround(height float64) physics.Field {
 	}}
 }
 
-func Round(center mgl64.Vec3, radius float64) physics.Field {
-	return &physics.Force{AccelerationFunc: func(obj physics.Object) mgl64.Vec3 {
+func Round(center mgl64.Vec3, radius physics.Meter) physics.Field {
+	return &physics.Force{AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
 		if obj, ok := obj.(physics.Movable); ok {
 			direction := obj.Location().Sub(center)
 			distance := direction.Len()
@@ -43,28 +43,34 @@ func Round(center mgl64.Vec3, radius float64) physics.Field {
 	}}
 }
 
-func RoundGround(center mgl64.Vec3, radius float64) physics.Field {
-	return &physics.Force{AccelerationFunc: func(obj physics.Object) mgl64.Vec3 {
+func RoundGround(center mgl64.Vec3, radius physics.Meter) physics.Field {
+	return &physics.Force{AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
+		//direction := center.Sub(obj.Location())
 		direction := obj.Location().Sub(center)
-		distance := direction.Len()
-		if obj, ok := obj.(physics.Movable); ok {
-			if distance >= radius {
-				obj.SetLocation(center.Add(direction.Normalize().Mul(radius)))
-				obj.SetVelocity(mgl64.Vec3{})
-			}
+		rad := 0.0
+		if obj, ok := obj.(physics.Collided); ok {
+			rad = obj.Box().Radius
+		}
+		distance := direction.Len() + rad
+
+		if distance >= radius {
+			obj.SetLocation(center.Add(direction.Normalize().Mul(radius - rad)))
 		}
 		return mgl64.Vec3{}
 	}}
 }
 
-func AbsorbGroundX(absorbFactor, height float64) physics.Field {
-	return &physics.Force{AccelerationFunc: func(obj physics.Object) mgl64.Vec3 {
-		if obj, ok := obj.(physics.Movable); ok {
-			if math.Abs(obj.Location().X()-height) <= 0.5 {
-				vel := obj.Velocity().Mul(-absorbFactor)
-				obj.SetVelocity(vel)
+func AbsorbGroundX(min, max physics.Meter) physics.Field {
+	return &physics.Force{AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
+		if obj, ok := obj.(physics.Collided); ok {
+			if obj.Location().X() >= max-obj.Box().Radius {
 				loc := obj.Location()
-				loc[0] = height
+				loc[0] = max - obj.Box().Radius
+				obj.SetLocation(loc)
+			}
+			if obj.Location().X() <= min+obj.Box().Radius {
+				loc := obj.Location()
+				loc[0] = min + obj.Box().Radius
 				obj.SetLocation(loc)
 			}
 		}
@@ -72,14 +78,17 @@ func AbsorbGroundX(absorbFactor, height float64) physics.Field {
 	}}
 }
 
-func AbsorbGroundY(absorbFactor, height float64) physics.Field {
-	return &physics.Force{AccelerationFunc: func(obj physics.Object) mgl64.Vec3 {
-		if obj, ok := obj.(physics.Movable); ok {
-			if math.Abs(obj.Location().Y()-height) <= 0.5 {
-				vel := obj.Velocity().Mul(-absorbFactor)
-				obj.SetVelocity(vel)
+func AbsorbGroundY(min, max physics.Meter) physics.Field {
+	return &physics.Force{AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
+		if obj, ok := obj.(physics.Collided); ok {
+			if obj.Location().Y() >= max-obj.Box().Radius {
 				loc := obj.Location()
-				loc[1] = height
+				loc[1] = max - obj.Box().Radius
+				obj.SetLocation(loc)
+			}
+			if obj.Location().Y() <= min+obj.Box().Radius {
+				loc := obj.Location()
+				loc[1] = min + obj.Box().Radius
 				obj.SetLocation(loc)
 			}
 		}
@@ -87,12 +96,10 @@ func AbsorbGroundY(absorbFactor, height float64) physics.Field {
 	}}
 }
 
-func AbsorbGroundZ(absorbFactor, height float64) physics.Field {
-	return &physics.Force{AccelerationFunc: func(obj physics.Object) mgl64.Vec3 {
+func AbsorbGroundZ(height physics.Meter) physics.Field {
+	return &physics.Force{AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
 		if obj, ok := obj.(physics.Movable); ok {
-			if math.Abs(obj.Location().Z()-height) < mgl64.Epsilon*200 {
-				vel := obj.Velocity().Mul(-absorbFactor)
-				obj.SetVelocity(vel)
+			if obj.Location().Z() < height {
 				loc := obj.Location()
 				loc[2] = height
 				obj.SetLocation(loc)
