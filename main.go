@@ -179,7 +179,7 @@ func run() {
 
 		imd.Draw(win)
 		win.Update()
-		if generate && fpsFrameCounter%10 == 0 {
+		if generate && fpsFrameCounter%5 == 0 {
 			for i := 1.0; i < 2; i++ {
 				c := color.RGBA{R: uint8(rand.Intn(255)), G: uint8(rand.Intn(255)), B: uint8(rand.Intn(255)), A: 0}
 
@@ -211,7 +211,7 @@ func run() {
 func test3D(objects []*Renderable3D, tickPerSecond uint64) ([]*Renderable3D, *physics.Solver) {
 	computer := &physics.Solver{
 		TickPerSecond:    tickPerSecond,
-		CollisionPerTick: 4,
+		CollisionPerTick: 2,
 		GlobalFields: []physics.Field{
 			physics.NewForce(mgl64.Vec3{0, -9.8, 0}),
 		},

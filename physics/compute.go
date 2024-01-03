@@ -3,6 +3,8 @@ package physics
 import (
 	"PhysicsEngine/physics/grid"
 	"github.com/go-gl/mathgl/mgl64"
+	"math"
+	"sync"
 )
 
 type Solver struct {
@@ -11,7 +13,7 @@ type Solver struct {
 	GridSize         uint64
 	GlobalFields     []Field
 	Constraints      []Constraint
-	Grid             *grid.Fixed[MoveCollided]
+	Grid             grid.Grid[MoveCollided]
 }
 
 func (r *Solver) Compute(
@@ -21,33 +23,41 @@ func (r *Solver) Compute(
 	if r.Grid == nil {
 		r.Grid = grid.NewFixedGrid[MoveCollided](3)
 	}
-	sum, sam := 0.0, 0.0
-	for _, o := range objects {
-		if o, ok := o.(MoveCollided); ok {
-			sum += o.Box().Radius
-			sam += 1
+	if g, ok := r.Grid.(interface{ Resize(float64) }); ok {
+		sum, sam := 0.0, 0.0
+		for _, o := range objects {
+			if o, ok := o.(MoveCollided); ok {
+				sum += o.Box().Radius
+				sam += 1
+			}
 		}
+		av := sum / sam
+		g.Resize(math.Ceil(av))
 	}
-	av := sum / sam
-	r.Grid.Resize(av * 1.2)
+	wg := &sync.WaitGroup{}
 	for _, o := range objects {
 		if o, ok := o.(MoveCollided); ok {
 			r.Grid.Put(o.Location(), o.Box().Radius, o)
 		}
+		var f []Field
+		if forces != nil {
+			f, _ = forces[o]
+		}
+		wg.Add(1)
+		o := o
+		go func() {
+			r.compute(o, f)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+
 	for i := uint64(1); i < r.CollisionPerTick; i++ {
 		r.solveCollision()
 	}
 
 	for _, o := range objects {
-		var f []Field
-		if forces != nil {
-			f, _ = forces[o]
-		}
-		r.compute(o, f)
-	}
-	for _, c := range r.Constraints {
-		for _, o := range objects {
+		for _, c := range r.Constraints {
 			if o, ok := o.(Movable); ok {
 				c.Constraint(o)
 			}
@@ -66,15 +76,11 @@ func (r *Solver) compute(
 		accelerationPresent := self.Acceleration()
 
 		for _, f := range r.GlobalFields {
-			if f.Interact(self) {
-				accelerationPresent = accelerationPresent.Add(f.Accelerate(self, dt))
-			}
+			accelerationPresent = accelerationPresent.Add(f.Accelerate(self, dt))
 		}
 
 		for _, f := range forces {
-			if f.Interact(self) {
-				accelerationPresent = accelerationPresent.Add(f.Accelerate(self, dt))
-			}
+			accelerationPresent = accelerationPresent.Add(f.Accelerate(self, dt))
 		}
 
 		locationFuture := r.calcVerlet(self, dt, accelerationPresent)
@@ -88,13 +94,13 @@ func (r *Solver) compute(
 func (r *Solver) calcVerlet(self Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
 	locationPast := self.LastPosition()
 	locationPresent := self.Location()
+	vel := locationPresent.Sub(locationPast).Mul(-1.0 / dt)
+	accel := vel.Normalize().Mul(vel.LenSqr()).Mul(1 / 2)
+
+	accelerationPresent = accelerationPresent.Add(accel)
 
 	locationFuture := locationPresent.Mul(2).Sub(locationPast).
 		Add(accelerationPresent.Mul(dt * dt))
-
-	if locationFuture.Sub(locationPresent).Len() < 0.01 {
-		locationFuture = locationPresent
-	}
 
 	return locationFuture
 }

@@ -28,14 +28,6 @@ type Charged interface {
 	Charge() float64
 }
 
-type Chained interface {
-	Object
-	HasNext() bool
-	Next() Chained
-	HasPrev() bool
-	Prev() Chained
-}
-
 type MoveCollided interface {
 	Movable
 	Collided

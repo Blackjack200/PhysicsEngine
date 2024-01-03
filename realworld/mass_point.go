@@ -65,37 +65,3 @@ func (p *MassPoint) Charge() float64 {
 func (p *MassPoint) Box() *physics.CollisionBox {
 	return p.box
 }
-
-type ChainNode struct {
-	*MassPoint
-	next *ChainNode
-}
-
-func NewChainNode(p *MassPoint) *ChainNode {
-	return &ChainNode{
-		MassPoint: p,
-		next:      nil,
-	}
-}
-
-func (c *ChainNode) Connect(n *ChainNode) {
-	c.next = n
-}
-
-func (c *ChainNode) Next() physics.Chained {
-	return c.next
-}
-
-func (c *ChainNode) HasNext() bool {
-	return c.next != nil
-}
-
-func (c *ChainNode) HasPrev() bool {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *ChainNode) Prev() physics.Chained {
-	//TODO implement me
-	panic("implement me")
-}
