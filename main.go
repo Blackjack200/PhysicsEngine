@@ -2,6 +2,9 @@ package main
 
 import (
 	"PhysicsEngine/physics"
+	"PhysicsEngine/physics/cube"
+	"PhysicsEngine/physics/motion"
+	"PhysicsEngine/physics/unit"
 	"PhysicsEngine/realworld"
 	"fmt"
 	"github.com/faiface/pixel"
@@ -24,7 +27,7 @@ func pixelToMeter(pixel float64) float64 {
 	return pixel / PixelPerMeter
 }
 
-func meterToPixel(meter physics.Meter) float64 {
+func meterToPixel(meter unit.Meter) float64 {
 	return meter * PixelPerMeter
 }
 
@@ -57,7 +60,7 @@ func (o *Renderable3D) Render(imd *imdraw.IMDraw, win *pixelgl.Window) {
 	imd.Color = o.Color
 	distanceToCamera := objV.Sub(cameraPos).Len()
 
-	radius := physics.Meter(1) / distanceToCamera
+	radius := unit.Meter(1) / distanceToCamera
 	if o, ok := o.Obj.(physics.Collided); ok {
 		radius = o.Box().Radius / distanceToCamera
 	}
@@ -75,8 +78,8 @@ func perspectiveProjection(point mgl64.Vec3, screenCenter pixel.Vec, fov float64
 }
 
 func run() {
-	weight := physics.Meter(100)
-	height := physics.Meter(100)
+	weight := unit.Meter(100)
+	height := unit.Meter(100)
 	cfg := pixelgl.WindowConfig{
 		Title:     "Physics Simulation",
 		Bounds:    pixel.R(0, 0, meterToPixel(weight), meterToPixel(height)),
@@ -143,7 +146,7 @@ func run() {
 			win.Clear(colornames.Black)
 		}
 
-		forces := make(map[physics.Object][]physics.Field)
+		forces := make(map[physics.Object][]motion.Field)
 		/*for _, o := range objects {
 			obj := o.Obj
 			if obj, ok := obj.(physics.Charged); ok {
@@ -188,7 +191,7 @@ func run() {
 				object := realworld.NewMassPoint(
 					position,
 					1,
-					&physics.CollisionBox{Radius: 5},
+					&cube.CollisionBox{Radius: 5},
 					-1*0.0001,
 				)
 				object.SetVelocity(mgl64.Vec3{0, 0, 20}, secondPerTick)
@@ -208,14 +211,14 @@ func run() {
 	}
 }
 
-func test3D(objects []*Renderable3D, tickPerSecond uint64) ([]*Renderable3D, *physics.Solver) {
-	computer := &physics.Solver{
+func test3D(objects []*Renderable3D, tickPerSecond uint64) ([]*Renderable3D, *motion.Solver) {
+	computer := &motion.Solver{
 		TickPerSecond:    tickPerSecond,
 		CollisionPerTick: 2,
-		GlobalFields: []physics.Field{
-			physics.NewForce(mgl64.Vec3{0, -9.8, 0}),
+		GlobalFields: []motion.Field{
+			motion.NewForce(mgl64.Vec3{0, -9.8, 0}),
 		},
-		Constraints: []physics.Constraint{
+		Constraints: []motion.Constraint{
 			realworld.RoundGround(mgl64.Vec3{50, 50, 0}, 50),
 		},
 	}

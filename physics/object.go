@@ -1,6 +1,7 @@
 package physics
 
 import (
+	"PhysicsEngine/physics/cube"
 	"github.com/go-gl/mathgl/mgl64"
 )
 
@@ -20,7 +21,7 @@ type Movable interface {
 
 type Collided interface {
 	Object
-	Box() *CollisionBox
+	Box() *cube.CollisionBox
 }
 
 type Charged interface {

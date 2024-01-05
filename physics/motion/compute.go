@@ -1,6 +1,7 @@
-package physics
+package motion
 
 import (
+	"PhysicsEngine/physics"
 	"PhysicsEngine/physics/grid"
 	"github.com/go-gl/mathgl/mgl64"
 	"math"
@@ -13,20 +14,20 @@ type Solver struct {
 	GridSize         uint64
 	GlobalFields     []Field
 	Constraints      []Constraint
-	Grid             grid.Grid[MoveCollided]
+	Grid             grid.Grid[physics.MoveCollided]
 }
 
 func (r *Solver) Compute(
-	objects []Object,
-	forces map[Object][]Field,
+	objects []physics.Object,
+	forces map[physics.Object][]Field,
 ) {
 	if r.Grid == nil {
-		r.Grid = grid.NewFixedGrid[MoveCollided](3)
+		r.Grid = grid.NewFixedGrid[physics.MoveCollided](3)
 	}
 	if g, ok := r.Grid.(interface{ Resize(float64) }); ok {
 		sum, sam := 0.0, 0.0
 		for _, o := range objects {
-			if o, ok := o.(MoveCollided); ok {
+			if o, ok := o.(physics.MoveCollided); ok {
 				sum += o.Box().Radius
 				sam += 1
 			}
@@ -36,7 +37,7 @@ func (r *Solver) Compute(
 	}
 	wg := &sync.WaitGroup{}
 	for _, o := range objects {
-		if o, ok := o.(MoveCollided); ok {
+		if o, ok := o.(physics.MoveCollided); ok {
 			r.Grid.Put(o.Location(), o.Box().Radius, o)
 		}
 		var f []Field
@@ -58,7 +59,7 @@ func (r *Solver) Compute(
 
 	for _, o := range objects {
 		for _, c := range r.Constraints {
-			if o, ok := o.(Movable); ok {
+			if o, ok := o.(physics.Movable); ok {
 				c.Constraint(o)
 			}
 		}
@@ -66,13 +67,13 @@ func (r *Solver) Compute(
 }
 
 func (r *Solver) compute(
-	self Object,
+	self physics.Object,
 	forces []Field,
 ) {
 	//present
 	dt := float64(1) / float64(r.TickPerSecond)
 
-	if self, ok := self.(Movable); ok {
+	if self, ok := self.(physics.Movable); ok {
 		accelerationPresent := self.Acceleration()
 
 		for _, f := range r.GlobalFields {
@@ -91,7 +92,7 @@ func (r *Solver) compute(
 	}
 }
 
-func (r *Solver) calcVerlet(self Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
+func (r *Solver) calcVerlet(self physics.Movable, dt float64, accelerationPresent mgl64.Vec3) mgl64.Vec3 {
 	locationPast := self.LastPosition()
 	locationPresent := self.Location()
 	vel := locationPresent.Sub(locationPast).Mul(-1.0 / dt)

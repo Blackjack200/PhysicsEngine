@@ -2,6 +2,7 @@ package realworld
 
 import (
 	"PhysicsEngine/physics"
+	"PhysicsEngine/physics/motion"
 	"github.com/go-gl/mathgl/mgl64"
 )
 
@@ -10,8 +11,8 @@ const (
 	CoulombConstant       = 8.99e9
 )
 
-func Universal(a physics.Object) physics.Field {
-	return &physics.Force{
+func Universal(a physics.Object) motion.Field {
+	return &motion.Force{
 		AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
 			if a == obj {
 				return [3]float64{}
@@ -23,8 +24,8 @@ func Universal(a physics.Object) physics.Field {
 	}
 }
 
-func Electric(a physics.Charged) physics.Field {
-	return &physics.Force{
+func Electric(a physics.Charged) motion.Field {
+	return &motion.Force{
 		AccelerationFunc: func(obj physics.Object, dt float64) mgl64.Vec3 {
 			dist := obj.Location().Sub(a.Location())
 			if ac, ok := obj.(physics.Charged); ok {

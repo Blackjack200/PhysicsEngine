@@ -1,7 +1,7 @@
 package realworld
 
 import (
-	"PhysicsEngine/physics"
+	"PhysicsEngine/physics/cube"
 	"github.com/go-gl/mathgl/mgl64"
 )
 
@@ -10,11 +10,11 @@ type MassPoint struct {
 	lastLocation mgl64.Vec3
 	acceleration mgl64.Vec3
 	mass         float64
-	box          *physics.CollisionBox
+	box          *cube.CollisionBox
 	charge       float64
 }
 
-func NewMassPoint(location mgl64.Vec3, mass float64, box *physics.CollisionBox, charge float64) *MassPoint {
+func NewMassPoint(location mgl64.Vec3, mass float64, box *cube.CollisionBox, charge float64) *MassPoint {
 	return &MassPoint{
 		location:     location,
 		lastLocation: location,
@@ -62,6 +62,6 @@ func (p *MassPoint) Charge() float64 {
 	return p.charge
 }
 
-func (p *MassPoint) Box() *physics.CollisionBox {
+func (p *MassPoint) Box() *cube.CollisionBox {
 	return p.box
 }

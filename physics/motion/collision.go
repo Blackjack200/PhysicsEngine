@@ -1,30 +1,10 @@
-package physics
+package motion
 
 import (
+	"PhysicsEngine/physics"
 	"PhysicsEngine/physics/grid"
-	"github.com/go-gl/mathgl/mgl64"
 	"sync"
 )
-
-type CollisionBox struct {
-	Radius Meter
-}
-
-type TranslatedBox struct {
-	Radius Meter
-	Center mgl64.Vec3
-}
-
-func (b *CollisionBox) Translate(center mgl64.Vec3) *TranslatedBox {
-	return &TranslatedBox{
-		Radius: b.Radius,
-		Center: center,
-	}
-}
-
-func (b *TranslatedBox) Collided(box *TranslatedBox) bool {
-	return box.Center.Sub(b.Center).Len() <= (box.Radius + b.Radius)
-}
 
 func (r *Solver) solveCollision() {
 	elem := []int64{-1, 0, 1}
@@ -54,7 +34,7 @@ func (r *Solver) solveCollision() {
 	}
 	wg.Wait()
 }
-func (r *Solver) solveCollisionInternal(self MoveCollided, objects []MoveCollided) {
+func (r *Solver) solveCollisionInternal(self physics.MoveCollided, objects []physics.MoveCollided) {
 	sLoc := self.Location()
 	sB := self.Box().Translate(sLoc)
 

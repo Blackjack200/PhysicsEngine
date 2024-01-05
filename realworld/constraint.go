@@ -2,11 +2,13 @@ package realworld
 
 import (
 	"PhysicsEngine/physics"
+	"PhysicsEngine/physics/motion"
+	"PhysicsEngine/physics/unit"
 	"github.com/go-gl/mathgl/mgl64"
 )
 
-func RoundGround(center mgl64.Vec3, radius physics.Meter) physics.Constraint {
-	return physics.NewConstraint(func(obj physics.Movable) {
+func RoundGround(center mgl64.Vec3, radius unit.Meter) motion.Constraint {
+	return motion.NewConstraint(func(obj physics.Movable) {
 		direction := obj.Location().Sub(center)
 		rad := 0.0
 		if obj, ok := obj.(physics.Collided); ok {
@@ -20,8 +22,8 @@ func RoundGround(center mgl64.Vec3, radius physics.Meter) physics.Constraint {
 	})
 }
 
-func GroundX(min, max physics.Meter) physics.Constraint {
-	return physics.NewConstraint(func(obj physics.Movable) {
+func GroundX(min, max unit.Meter) motion.Constraint {
+	return motion.NewConstraint(func(obj physics.Movable) {
 		radius := 0.0
 		if obj, ok := obj.(physics.Collided); ok {
 			radius = obj.Box().Radius
@@ -39,8 +41,8 @@ func GroundX(min, max physics.Meter) physics.Constraint {
 	})
 }
 
-func GroundY(min, max physics.Meter) physics.Constraint {
-	return physics.NewConstraint(func(obj physics.Movable) {
+func GroundY(min, max unit.Meter) motion.Constraint {
+	return motion.NewConstraint(func(obj physics.Movable) {
 		radius := 0.0
 		if obj, ok := obj.(physics.Collided); ok {
 			radius = obj.Box().Radius
@@ -58,8 +60,8 @@ func GroundY(min, max physics.Meter) physics.Constraint {
 	})
 }
 
-func GroundZ(min, max physics.Meter) physics.Constraint {
-	return physics.NewConstraint(func(obj physics.Movable) {
+func GroundZ(min, max unit.Meter) motion.Constraint {
+	return motion.NewConstraint(func(obj physics.Movable) {
 		radius := 0.0
 		if obj, ok := obj.(physics.Collided); ok {
 			radius = obj.Box().Radius

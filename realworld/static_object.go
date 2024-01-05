@@ -1,17 +1,17 @@
 package realworld
 
 import (
-	"PhysicsEngine/physics"
+	"PhysicsEngine/physics/cube"
 	"github.com/go-gl/mathgl/mgl64"
 )
 
 type StaticPoint struct {
 	mass float64
 	loc  mgl64.Vec3
-	box  *physics.CollisionBox
+	box  *cube.CollisionBox
 }
 
-func NewStaticPoint(mass float64, loc mgl64.Vec3, box *physics.CollisionBox) *StaticPoint {
+func NewStaticPoint(mass float64, loc mgl64.Vec3, box *cube.CollisionBox) *StaticPoint {
 	return &StaticPoint{mass: mass, loc: loc, box: box}
 }
 
@@ -26,7 +26,7 @@ func (p *StaticPoint) Mass() float64 {
 	return p.mass
 }
 
-func (p *StaticPoint) Box() *physics.CollisionBox {
+func (p *StaticPoint) Box() *cube.CollisionBox {
 	return p.box
 }
 
